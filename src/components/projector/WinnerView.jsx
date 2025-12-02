@@ -1,10 +1,10 @@
-// src/components/projector/WinnerView.jsx
 import { useEffect, useState } from 'react';
 import { supabase } from '../../services/supabase.js';
 
 const WinnerView = ({ category, onBackToNominees }) => {
-  const [winner, setWinner] = useState(null);
+  const [winners, setWinners] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isTie, setIsTie] = useState(false);
 
   useEffect(() => {
     if (!category) return;
@@ -12,61 +12,43 @@ const WinnerView = ({ category, onBackToNominees }) => {
     const fetchWinner = async () => {
       setLoading(true);
 
-      // traer todos los votos de esa categoría
+      // Trae todos los votos de esa categoría
       const { data: votes, error: votesError } = await supabase
         .from('votes')
         .select('nominee_id')
         .eq('category_id', category.id);
 
-      if (votesError) {
-        console.error(votesError);
+      if (votesError || !votes || votes.length === 0) {
+        setWinners([]);
         setLoading(false);
         return;
       }
 
-      if (!votes || votes.length === 0) {
-        setWinner(null);
-        setLoading(false);
-        return;
-      }
-
-      // contar votos por nominee_id
+      // Cuenta votos por nominee_id
       const counts = {};
       votes.forEach((v) => {
         counts[v.nominee_id] = (counts[v.nominee_id] || 0) + 1;
       });
 
-      const winnerId = Object.entries(counts).sort(
-        (a, b) => b[1] - a[1]
-      )[0][0];
+      const maxVotes = Math.max(...Object.values(counts));
+      const winnerIds = Object.entries(counts)
+        .filter(([id, count]) => count === maxVotes)
+        .map(([id]) => Number(id));
 
-      // traer datos del ganador
-      const { data: nomineeData, error: nomineeError } = await supabase
+      setIsTie(winnerIds.length > 1);
+
+      // Busca todos los datos de los ganadores
+      const { data: nomineesData, error: nomineesError } = await supabase
         .from('nominees')
         .select('*')
-        .eq('id', winnerId)
-        .single();
+        .in('id', winnerIds);
 
-      if (nomineeError) {
-        console.error(nomineeError);
-        setLoading(false);
-        return;
-      }
-
-      setWinner(nomineeData);
+      setWinners(nomineesData || []);
       setLoading(false);
     };
 
     fetchWinner();
   }, [category]);
-
-  if (!category) {
-    return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <p className="text-2xl">No hay categoría seleccionada.</p>
-      </div>
-    );
-  }
 
   if (loading) {
     return (
@@ -76,7 +58,7 @@ const WinnerView = ({ category, onBackToNominees }) => {
     );
   }
 
-  if (!winner) {
+  if (!winners || winners.length === 0) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
         <p className="text-2xl">Aún no hay votos para esta categoría.</p>
@@ -84,30 +66,32 @@ const WinnerView = ({ category, onBackToNominees }) => {
     );
   }
 
-  // aquí puedes usar el diseño épico que ya tenías, pongo un resumen:
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-slate-900 to-black text-white flex flex-col items-center justify-center relative overflow-hidden">
       <div className="relative z-10 flex flex-col items-center text-center px-4">
-        <p className="text-sm md:text-base uppercase tracking-[0.4em] text-slate-200/80 mb-3">
-          Y el ganador es...
+        <p className="text-base uppercase tracking-[0.4em] text-slate-200/80 mb-3">
+          {isTie ? '¡Es un empate!' : 'Y el ganador es...'}
         </p>
 
-        <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-yellow-300 drop-shadow-[0_0_30px_rgba(250,204,21,0.9)]">
+        <h1 className="text-3xl md:text-4xl font-extrabold text-yellow-300 drop-shadow mb-6">
           {category.name}
         </h1>
 
-        <div className="mt-8 md:mt-10 flex flex-col items-center">
-          <div className="relative w-40 h-40 md:w-52 md:h-52 rounded-full overflow-hidden border-[6px] border-yellow-300 shadow-[0_0_60px_rgba(250,204,21,0.9)]">
-            <img
-              src={winner.img_url}
-              alt={winner.name}
-              className="w-full h-full object-cover"
-            />
-          </div>
-
-          <h2 className="mt-6 text-3xl md:text-4xl font-extrabold text-white drop-shadow-lg">
-            {winner.name}
-          </h2>
+        <div className="flex flex-row flex-wrap justify-center gap-6">
+          {winners.map((winner) => (
+            <div key={winner.id} className="flex flex-col items-center">
+              <div className="w-32 h-32 rounded-full overflow-hidden border-[6px] border-yellow-300 shadow-lg mb-4">
+                <img
+                  src={winner.img_url}
+                  alt={winner.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <h2 className="text-xl md:text-2xl font-extrabold text-white">
+                {winner.name}
+              </h2>
+            </div>
+          ))}
         </div>
 
         <button
