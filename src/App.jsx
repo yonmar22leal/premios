@@ -1,38 +1,42 @@
-// App.jsx (build para producción)
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import VotingPage from './pages/VotingPage.jsx';
 import ProjectorView from './pages/ProjectorView.jsx';
 import ControlPanel from './pages/ControlPanel.jsx';
 import ChristmasLayout from './components/ChristmasLayout.jsx';
 
-
 function App() {
-  const search = window.location.search;
-  const params = new URLSearchParams(search);
+  // Detectar admin DESPUÉS del hash
+  const fullPath = window.location.hash.substring(1);
+  const url = new URL('http://fake' + fullPath);
+  const params = new URLSearchParams(url.search);
   const isAdmin = params.get('admin') === 'true';
 
-  if (!isAdmin) {
-    // MODO PÚBLICO: solo ven la pantalla de votar
+  console.log('FULL PATH:', fullPath);
+  console.log('IS ADMIN:', isAdmin);
+
+  // MODO ADMIN (todas las rutas disponibles)
+  if (isAdmin) {
     return (
       <HashRouter>
         <Routes>
           <Route element={<ChristmasLayout />}>
-            <Route path="/votar" element={<VotingPage />} />
+            <Route path="/" element={<ProjectorView />} />
+            <Route path="/votar" element={<VotingPage isAdmin={true} />} />
             <Route path="/control" element={<ControlPanel />} />
-            <Route path="*" element={<Navigate to="/votar" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>
       </HashRouter>
     );
   }
 
-  // MODO ADMIN: tú entras con ?admin=true y tienes todas las vistas
+  // MODO PÚBLICO (solo votar)
   return (
     <HashRouter>
       <Routes>
         <Route element={<ChristmasLayout />}>
           <Route path="/" element={<ProjectorView />} />
-          <Route path="/votar" element={<VotingPage />} />
+          <Route path="/votar" element={<VotingPage isAdmin={false} />} />
           <Route path="/control" element={<ControlPanel />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
@@ -42,4 +46,3 @@ function App() {
 }
 
 export default App;
-
