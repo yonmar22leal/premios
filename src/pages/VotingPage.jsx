@@ -111,10 +111,11 @@ const VotingPage = ({ isAdmin = false }) => {
     setMessage('');
     setSelectedNomineeId(nomineeId);
 
+    // ✅ SIN is_admin_vote - solo datos esenciales
     const { error } = await supabase.from('votes').insert({
       category_id: selectedCategoryId,
       nominee_id: nomineeId,
-      is_admin_vote: isAdmin,
+      // ✅ Eliminado: is_admin_vote: isAdmin
     });
 
     if (error) {
