@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../../services/supabase.js';
-import drumrollSfx from '../../assets/audio/drumroll.mp3';
-import winnerSfx from '../../assets/audio/winner.mp3';
+//import drumrollSfx from '../../assets/audio/drumroll.mp3';
+//import winnerSfx from '../../assets/audio/winner.mp3';
 
 const WinnerView = ({ category, onBackToNominees }) => {
   const [winners, setWinners] = useState([]);   // [{ id, name, img_url, votes }]
@@ -137,18 +137,14 @@ const WinnerView = ({ category, onBackToNominees }) => {
   useEffect(() => {
     if (loading || !winners || winners.length === 0) return;
     
-    // Iniciar redoble inmediatamente
-    const drum = new Audio(drumrollSfx);
-    drum.play().catch(() => {});
-
+    // Esperar 5.5s SOLO para cambiar stage, SIN sonido winner
     const t = setTimeout(() => {
-      const win = new Audio(winnerSfx);
-      win.play().catch(() => {});
       setStage('revealed');
-    }, 5500); // 5s de redoble SIEMPRE
+    }, 5500); // 5.5s de espera
 
     return () => clearTimeout(t);
   }, [loading, winners]);
+
 
   if (!category) {
     return (
