@@ -1,10 +1,11 @@
 // src/components/ControlPanel/VoteResetter.jsx
 import { supabase } from '../../services/supabase.js';
+import { resetCategoryVoted, resetAllVoted } from '../../utils/votingCache.js';
 
 const VoteResetter = ({ state, categories }) => {
   const { current_category_id } = state || {};
 
-  // 🗑️ Borrar votos de la categoría actual
+  // 🗑️ Borrar votos de la categoría actual + reset localStorage
   const resetCategoryVotes = async () => {
     if (!current_category_id) {
       alert('Selecciona una categoría primero');
@@ -22,6 +23,7 @@ const VoteResetter = ({ state, categories }) => {
 
     const confirm1 = window.confirm(
       `⚠️ ¿Seguro que quieres ELIMINAR TODOS los votos de la categoría "${catName}"?\n\n` +
+      `✅ Esto también permitirá que TODOS puedan votar de nuevo.\n\n` +
       `Esta acción NO se puede deshacer.`
     );
     if (!confirm1) return;
@@ -35,6 +37,7 @@ const VoteResetter = ({ state, categories }) => {
 
       console.log('[VoteResetter] Votos ANTES de borrar categoría:', before, beforeError);
 
+      // 1. BORRAR VOTOS DE SUPABASE
       const { error: deleteError } = await supabase
         .from('votes')
         .delete()
@@ -46,6 +49,11 @@ const VoteResetter = ({ state, categories }) => {
         return;
       }
 
+      // 2. RESET LOCALSTORAGE DE ESTA CATEGORÍA
+      resetCategoryVoted(current_category_id);
+      console.log('[VoteResetter] ✅ LocalStorage reseteado para categoría:', current_category_id);
+
+      // Verificar después
       const { data: after, error: afterError } = await supabase
         .from('votes')
         .select('id')
@@ -53,17 +61,18 @@ const VoteResetter = ({ state, categories }) => {
 
       console.log('[VoteResetter] Votos DESPUÉS de borrar categoría:', after, afterError);
 
-      alert('✅ Votos de la categoría eliminados correctamente.');
+      alert(`✅ Votos de "${catName}" eliminados correctamente.\n\n👥 ¡TODOS pueden votar de nuevo!`);
     } catch (err) {
       console.error('[VoteResetter] Excepción reseteando votos categoría:', err);
       alert('❌ Error inesperado al eliminar votos.');
     }
   };
 
-  // 💥 Borrar TODOS los votos
+  // 💥 Borrar TODOS los votos + reset localStorage completo
   const resetAllVotes = async () => {
     const confirm1 = window.confirm(
       '🚨 ¡ATENCIÓN! Esto ELIMINARÁ TODOS LOS VOTOS de TODAS las categorías.\n\n' +
+      '✅ También reseteará el localStorage para que TODOS puedan votar desde cero.\n\n' +
       'La acción es PERMANENTE e IRREVERSIBLE.\n\n' +
       '¿Quieres continuar?'
     );
@@ -87,11 +96,11 @@ const VoteResetter = ({ state, categories }) => {
 
       console.log('[VoteResetter] Votos TOTALES ANTES:', before?.length, beforeError);
 
-      // IMPORTANTE: usar WHERE para cumplir la restricción "DELETE requires a WHERE clause"
+      // 1. BORRAR TODOS LOS VOTOS DE SUPABASE
       const { error: deleteAllError } = await supabase
         .from('votes')
         .delete()
-        .neq('id', -1); // id nunca será -1, así que borra todas las filas
+        .neq('id', -1); // Borra todas las filas
 
       if (deleteAllError) {
         console.error('[VoteResetter] Error DELETE total:', deleteAllError);
@@ -99,13 +108,18 @@ const VoteResetter = ({ state, categories }) => {
         return;
       }
 
+      // 2. RESET COMPLETO DEL LOCALSTORAGE
+      resetAllVoted();
+      console.log('[VoteResetter] ✅ LocalStorage completamente reseteado');
+
+      // Verificar después
       const { data: after, error: afterError } = await supabase
         .from('votes')
         .select('id');
 
       console.log('[VoteResetter] Votos TOTALES DESPUÉS:', after?.length, afterError);
 
-      alert('🗑️ TODOS los votos han sido eliminados correctamente.');
+      alert('🗑️ ✅ TODOS los votos han sido eliminados correctamente.\n\n👥 ¡TODOS los usuarios pueden votar de nuevo!');
     } catch (err) {
       console.error('[VoteResetter] Excepción reseteando TODOS los votos:', err);
       alert('❌ Error inesperado al eliminar todos los votos.');
@@ -148,7 +162,7 @@ const VoteResetter = ({ state, categories }) => {
             💥 ELIMINAR TODOS LOS VOTOS
           </button>
           <p className="text-xs text-red-300/80 mt-2 text-center font-mono">
-            ⚠️ Acción IRREVERSIBLE - Usa con precaución
+            ⚠️ Acción IRREVERSIBLE - Resetea Supabase + localStorage
           </p>
         </div>
       </div>

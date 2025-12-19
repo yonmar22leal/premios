@@ -65,6 +65,7 @@ const VotingPage = ({ isAdmin = false }) => {
   }, []);
 
   // Cargar nominados cuando cambia categoría
+// Cargar nominados cuando cambia categoría
   useEffect(() => {
     if (!selectedCategoryId) {
       setNominees([]);
@@ -72,7 +73,12 @@ const VotingPage = ({ isAdmin = false }) => {
       return;
     }
 
-    setAlreadyVoted(hasVotedCategory(selectedCategoryId));
+    // ⬇️ CAMBIO CLAVE: comprobar voto de forma asíncrona
+    (async () => {
+      const already = await hasVotedCategory(selectedCategoryId);
+      setAlreadyVoted(already);
+    })();
+
     setSelectedNomineeId(null);
     setMessage('');
 
@@ -93,7 +99,7 @@ const VotingPage = ({ isAdmin = false }) => {
         .from('nominees')
         .select('*')
         .in('id', joins.map(j => j.nominee_id));
-      
+
       setNominees(nomineesData || []);
       setLoadingNominees(false);
     };
@@ -102,7 +108,10 @@ const VotingPage = ({ isAdmin = false }) => {
   }, [selectedCategoryId]);
 
   const handleVote = async (nomineeId) => {
-    if (hasVotedCategory(selectedCategoryId)) {
+    if (!selectedCategoryId) return;
+
+    const already = await hasVotedCategory(selectedCategoryId);
+    if (already) {
       setMessage('Ya registraste tu voto en esta categoría.');
       return;
     }
@@ -111,18 +120,12 @@ const VotingPage = ({ isAdmin = false }) => {
     setMessage('');
     setSelectedNomineeId(nomineeId);
 
-    // ✅ SIN is_admin_vote - solo datos esenciales
-    const { error } = await supabase.from('votes').insert({
-      category_id: selectedCategoryId,
-      nominee_id: nomineeId,
-      // ✅ Eliminado: is_admin_vote: isAdmin
-    });
+    // ⬇️ si ahora markCategoryVoted inserta en Supabase, úsalo directo:
+    const ok = await markCategoryVoted(selectedCategoryId, nomineeId);
 
-    if (error) {
-      console.error(error);
+    if (!ok) {
       setMessage('Hubo un error al registrar tu voto.');
     } else {
-      markCategoryVoted(selectedCategoryId);
       setAlreadyVoted(true);
       setMessage(`¡Voto ${isAdmin ? 'ADMIN' : 'público'} registrado! Gracias por participar.`);
     }

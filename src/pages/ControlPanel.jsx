@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../services/supabase.js';
-import drumrollSfx from '/audio/drumroll.mp3';
-import winnerSfx from '/audio/winner.mp3';
+//import drumrollSfx from '/audio/drumroll.mp3';
+//import winnerSfx from '/audio/winner.mp3';
 import StateInfo from '../components/controlpanel/StateInfo.jsx';
 import CategoryControls from '../components/controlpanel/CategoryControls.jsx';
 import NomineeList from '../components/controlpanel/NomineeList.jsx';
@@ -223,8 +223,8 @@ const ControlPanel = () => {
             <RevealWinnerButton 
               state={state} 
               updateState={updateState} 
-              drumrollSfx={drumrollSfx}
-              winnerSfx={winnerSfx}
+            //  drumrollSfx={drumrollSfx}
+            //  winnerSfx={winnerSfx}
             />
           </>
         )}
@@ -232,7 +232,7 @@ const ControlPanel = () => {
         <VoteResetter 
           state={state} 
           updateState={updateState}
-          categories={categories}  // ✅ AGREGAR ESTA LÍNEA
+          categories={categories} 
         />
       </main>
     </div>
